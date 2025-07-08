@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,12 +20,6 @@ interface NewsArticle {
   source: NewsSource;
   keywords: string[];
   authors: string[];
-}
-
-interface NewsResponse {
-  success: boolean;
-  total: number;
-  data: NewsArticle[];
 }
 
 const NewsWebsite = () => {
