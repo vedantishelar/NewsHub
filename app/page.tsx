@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Moon, Sun, RefreshCw, Clock, ExternalLink, Search, Globe, TrendingUp, Heart, Briefcase, Zap, Gamepad2 } from 'lucide-react';
+import { Moon, Sun, RefreshCw, Clock, ExternalLink, Search, Globe, TrendingUp, Heart, Briefcase, Zap, Gamepad2, Sparkles, Star } from 'lucide-react';
 
 // Types
 interface NewsSource {
@@ -22,6 +22,12 @@ interface NewsArticle {
   authors: string[];
 }
 
+interface NewsResponse {
+  success: boolean;
+  total: number;
+  data: NewsArticle[];
+}
+
 const NewsWebsite = () => {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,14 +35,16 @@ const NewsWebsite = () => {
   const [selectedTopic, setSelectedTopic] = useState('health');
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
 
   const topics = [
-    { id: 'health', name: 'Health', icon: Heart },
-    { id: 'business', name: 'Business', icon: Briefcase },
-    { id: 'technology', name: 'Technology', icon: Zap },
-    { id: 'sports', name: 'Sports', icon: TrendingUp },
-    { id: 'entertainment', name: 'Entertainment', icon: Gamepad2 },
-    { id: 'general', name: 'General', icon: Globe },
+    { id: 'health', name: 'Health', icon: Heart, color: 'from-pink-500 to-rose-500', bg: 'bg-gradient-to-r from-pink-50 to-rose-50' },
+    { id: 'business', name: 'Business', icon: Briefcase, color: 'from-blue-500 to-indigo-500', bg: 'bg-gradient-to-r from-blue-50 to-indigo-50' },
+    { id: 'technology', name: 'Technology', icon: Zap, color: 'from-purple-500 to-violet-500', bg: 'bg-gradient-to-r from-purple-50 to-violet-50' },
+    { id: 'sports', name: 'Sports', icon: TrendingUp, color: 'from-green-500 to-emerald-500', bg: 'bg-gradient-to-r from-green-50 to-emerald-50' },
+    { id: 'entertainment', name: 'Entertainment', icon: Gamepad2, color: 'from-orange-500 to-red-500', bg: 'bg-gradient-to-r from-orange-50 to-red-50' },
+    { id: 'general', name: 'General', icon: Globe, color: 'from-cyan-500 to-blue-500', bg: 'bg-gradient-to-r from-cyan-50 to-blue-50' },
   ];
 
   const fetchNews = async (topic: string) => {
@@ -59,9 +67,10 @@ const NewsWebsite = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
+      const data: NewsResponse = await response.json();
       if (data.success) {
         setArticles(data.data);
+        setLastUpdated(new Date().toLocaleTimeString());
       } else {
         setError('Failed to fetch news');
       }
@@ -78,16 +87,16 @@ const NewsWebsite = () => {
   }, [selectedTopic]);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme) {
-      setDarkMode(JSON.parse(savedTheme));
-    }
+    setMounted(true);
+    // Remove localStorage usage for Claude.ai compatibility
+    const savedTheme = false; // Default to light mode
+    setDarkMode(savedTheme);
   }, []);
 
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    localStorage.setItem('darkMode', JSON.stringify(newMode));
+    // Remove localStorage usage for Claude.ai compatibility
   };
 
   const formatDate = (dateString: string) => {
@@ -111,86 +120,144 @@ const NewsWebsite = () => {
     setSearchTerm('');
   };
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = 'https://via.placeholder.com/400x200?text=No+Image';
+  };
+
+  const currentTopic = topics.find(t => t.id === selectedTopic);
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+    <div className={`min-h-screen transition-all duration-500 ${
+      darkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white' 
+        : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 text-gray-900'
     }`}>
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className={`absolute -top-40 -right-40 w-80 h-80 rounded-full ${
+          darkMode ? 'bg-purple-600/20' : 'bg-blue-400/20'
+        } blur-3xl animate-pulse`}></div>
+        <div className={`absolute -bottom-40 -left-40 w-80 h-80 rounded-full ${
+          darkMode ? 'bg-blue-600/20' : 'bg-purple-400/20'
+        } blur-3xl animate-pulse`}></div>
+      </div>
+
       {/* Header */}
-      <header className={`sticky top-0 z-50 backdrop-blur-md ${
-        darkMode ? 'bg-gray-800/80 border-gray-700' : 'bg-white/80 border-gray-200'
-      } border-b`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${
+        darkMode 
+          ? 'bg-gray-900/80 border-gray-700/50' 
+          : 'bg-white/80 border-white/50'
+      } shadow-lg`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Globe className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  NewsHub
-                </h1>
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur opacity-75"></div>
+                  <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    NewsHub
+                  </h1>
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Stay Updated, Stay Informed
+                  </p>
+                </div>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search news..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`pl-10 pr-4 py-2 rounded-full border ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                />
+              <div className="relative hidden sm:block">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur opacity-25"></div>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search news..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`pl-12 pr-6 py-3 w-64 rounded-full border-2 transition-all duration-300 ${
+                      darkMode 
+                        ? 'bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
+                        : 'bg-white/70 border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                    } focus:outline-none focus:ring-4 focus:ring-blue-500/20`}
+                  />
+                </div>
               </div>
               
               <button
                 onClick={() => fetchNews(selectedTopic)}
                 disabled={loading}
-                className={`p-2 rounded-full transition-colors ${
-                  darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                } ${loading ? 'animate-spin' : ''}`}
+                className={`relative p-3 rounded-full transition-all duration-300 ${
+                  darkMode 
+                    ? 'bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600' 
+                    : 'bg-white/70 hover:bg-white/90 border border-gray-200'
+                } hover:scale-110 ${loading ? 'animate-spin' : ''} shadow-lg`}
               >
                 <RefreshCw className="h-5 w-5" />
               </button>
               
               <button
                 onClick={toggleDarkMode}
-                className={`p-2 rounded-full transition-colors ${
-                  darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                }`}
+                className={`relative p-3 rounded-full transition-all duration-300 ${
+                  darkMode 
+                    ? 'bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600' 
+                    : 'bg-white/70 hover:bg-white/90 border border-gray-200'
+                } hover:scale-110 shadow-lg`}
               >
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {darkMode ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-purple-600" />}
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Mobile Search */}
+      <div className={`sm:hidden px-4 py-4 ${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm`}>
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search news..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`pl-12 pr-6 py-3 w-full rounded-full border-2 transition-all duration-300 ${
+              darkMode 
+                ? 'bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
+                : 'bg-white/70 border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+            } focus:outline-none focus:ring-4 focus:ring-blue-500/20`}
+          />
+        </div>
+      </div>
+
       {/* Topic Navigation */}
-      <nav className={`${darkMode ? 'bg-gray-800' : 'bg-white'} border-b ${
-        darkMode ? 'border-gray-700' : 'border-gray-200'
-      }`}>
+      <nav className={`${darkMode ? 'bg-gray-800/30' : 'bg-white/30'} backdrop-blur-sm border-b ${
+        darkMode ? 'border-gray-700/50' : 'border-white/50'
+      } sticky top-20 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8 overflow-x-auto py-4">
+          <div className="flex space-x-2 sm:space-x-4 overflow-x-auto py-6 scrollbar-hide">
             {topics.map(topic => {
               const Icon = topic.icon;
+              const isActive = selectedTopic === topic.id;
               return (
                 <button
                   key={topic.id}
                   onClick={() => handleTopicChange(topic.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
-                    selectedTopic === topic.id
-                      ? 'bg-blue-600 text-white'
+                  className={`flex items-center space-x-2 px-4 sm:px-6 py-3 rounded-2xl whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${
+                    isActive
+                      ? `bg-gradient-to-r ${topic.color} text-white shadow-lg shadow-${topic.color.split('-')[1]}-500/30`
                       : darkMode
-                      ? 'text-gray-300 hover:text-white hover:bg-gray-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
+                      ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 hover:text-white'
+                      : 'bg-white/50 text-gray-600 hover:bg-white/80 hover:text-gray-900'
+                  } border border-white/20`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="font-medium">{topic.name}</span>
+                  <Icon className="h-5 w-5" />
+                  <span className="font-semibold text-sm sm:text-base">{topic.name}</span>
+                  {isActive && <Star className="h-4 w-4 animate-pulse" />}
                 </button>
               );
             })}
@@ -199,70 +266,98 @@ const NewsWebsite = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        {/* Stats Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold mb-2">
-                {topics.find(t => t.id === selectedTopic)?.name} News
-              </h2>
-              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {filteredArticles.length} articles found
-              </p>
+              <div className="flex items-center space-x-3 mb-2">
+                {currentTopic && (
+                  <div className={`p-2 rounded-xl bg-gradient-to-r ${currentTopic.color}`}>
+                    <currentTopic.icon className="h-6 w-6 text-white" />
+                  </div>
+                )}
+                <h2 className={`text-3xl sm:text-4xl font-bold bg-gradient-to-r ${currentTopic?.color} bg-clip-text text-transparent`}>
+                  {currentTopic?.name} News
+                </h2>
+              </div>
+              <div className="flex items-center space-x-4">
+                <p className={`${darkMode ? 'text-purple-300' : 'text-purple-600'} font-medium`}>
+                  {filteredArticles.length} articles found
+                </p>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  darkMode ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  Live Updates
+                </div>
+              </div>
             </div>
-            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              Last updated: {new Date().toLocaleTimeString()}
+            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} flex items-center space-x-2`}>
+              <Clock className="h-4 w-4" />
+              <span>{mounted && lastUpdated && `Last updated: ${lastUpdated}`}</span>
             </div>
           </div>
         </div>
 
         {/* Error State */}
         {error && (
-          <div className="mb-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
+          <div className="mb-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 text-red-700 rounded-2xl shadow-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="font-medium">{error}</span>
+            </div>
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center items-center py-20">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-purple-200 rounded-full animate-spin border-t-purple-600 animate-reverse"></div>
+            </div>
           </div>
         )}
 
         {/* Articles Grid */}
         {!loading && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {filteredArticles.map((article, index) => (
               <article
                 key={index}
-                className={`rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 ${
+                className={`group relative rounded-3xl overflow-hidden transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 ${
                   darkMode 
-                    ? 'bg-gray-800 border border-gray-700 hover:bg-gray-750' 
-                    : 'bg-white border border-gray-200 hover:shadow-lg'
-                }`}
+                    ? 'bg-gray-800/50 border border-gray-700/50 hover:bg-gray-700/50' 
+                    : 'bg-white/70 border border-white/50 hover:bg-white/90'
+                } backdrop-blur-sm shadow-lg hover:shadow-2xl`}
               >
-                <div className="relative">
+                {/* Article Image */}
+                <div className="relative overflow-hidden">
                   <img
                     src={article.thumbnail}
                     alt={article.title}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x200?text=No+Image';
-                    }}
+                    className="w-full h-48 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={handleImageError}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                   <div className="absolute top-4 right-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      darkMode ? 'bg-gray-900/80 text-white' : 'bg-white/80 text-gray-900'
-                    }`}>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${
+                      darkMode ? 'bg-gray-900/80 text-white' : 'bg-white/90 text-gray-900'
+                    } shadow-lg`}>
                       {article.source.name}
-                    </span>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-4 left-4 flex items-center space-x-2 text-white">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm font-medium">{formatDate(article.date)}</span>
                   </div>
                 </div>
                 
+                {/* Article Content */}
                 <div className="p-6">
-                  <h3 className="font-bold text-lg mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
+                  <h3 className={`font-bold text-lg sm:text-xl mb-3 line-clamp-2 ${
+                    darkMode ? 'text-white' : 'text-black'
+                  } group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 group-hover:bg-clip-text transition-all duration-300`}>
                     {article.title}
                   </h3>
                   
@@ -272,38 +367,32 @@ const NewsWebsite = () => {
                     {article.description}
                   </p>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                        {formatDate(article.date)}
-                      </span>
-                    </div>
-                    
+                  <div className="flex items-center justify-between">
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                      className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 text-sm font-medium"
                     >
-                      <span>Read more</span>
+                      <span>Read More</span>
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </div>
                   
+                  {/* Keywords */}
                   {article.keywords.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
                       <div className="flex flex-wrap gap-2">
                         {article.keywords.slice(0, 3).map((keyword, idx) => (
                           <span
                             key={idx}
-                            className={`px-2 py-1 rounded-full text-xs ${
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
                               darkMode 
-                                ? 'bg-gray-700 text-gray-300' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}
+                                ? 'bg-gray-700/50 text-gray-300 border border-gray-600/50' 
+                                : 'bg-gray-100/50 text-gray-600 border border-gray-200/50'
+                            } hover:scale-105 transition-transform duration-200`}
                           >
-                            {keyword}
+                            #{keyword}
                           </span>
                         ))}
                       </div>
@@ -317,31 +406,56 @@ const NewsWebsite = () => {
 
         {/* No Results */}
         {!loading && filteredArticles.length === 0 && !error && (
-          <div className="text-center py-12">
-            <Globe className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No articles found</h3>
-            <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-              Try adjusting your search terms or selecting a different topic.
+          <div className="text-center py-20">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-20"></div>
+              </div>
+              <Globe className="relative h-20 w-20 text-gray-400 mx-auto" />
+            </div>
+            <h3 className={`text-2xl font-bold mb-4 bg-gradient-to-r ${currentTopic?.color} bg-clip-text text-transparent`}>
+              No articles found
+            </h3>
+            <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'} max-w-md mx-auto`}>
+              Try adjusting your search terms or selecting a different topic to discover more stories.
             </p>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className={`mt-12 border-t ${
-        darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <footer className={`relative mt-20 border-t ${
+        darkMode ? 'border-gray-700/50 bg-gray-800/30' : 'border-white/50 bg-white/30'
+      } backdrop-blur-sm`}>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Globe className="h-6 w-6 text-blue-600" />
-              <span className="text-xl font-bold">NewsHub</span>
+            <div className="flex items-center justify-center space-x-3 mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur opacity-75"></div>
+                <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                NewsHub
+              </span>
             </div>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-base mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Stay informed with the latest news from around the world.
             </p>
-            <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              © 2025 NewsHub. All rights reserved.
+            <div className="flex justify-center space-x-6 mb-6">
+              {['Privacy', 'Terms', 'Contact', 'About'].map((item) => (
+                <button
+                  key={item}
+                  className={`text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors duration-200`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              © 2025 NewsHub. All rights reserved. Designed with ❤️ for news lovers.
             </p>
           </div>
         </div>
