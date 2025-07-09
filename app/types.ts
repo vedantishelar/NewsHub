@@ -35,3 +35,21 @@ export interface NewsApiOptions {
     'x-rapidapi-host': string;
   };
 }
+
+// New interfaces for Groq AI summary
+export interface TopicSummary {
+  topic: string;
+  summary: string;
+  keyPoints: string[];
+  totalArticles: number;
+  generatedAt: string;
+  isLoading: boolean;
+}
+
+export interface GroqResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+}
