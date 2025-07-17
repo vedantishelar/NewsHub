@@ -1,18 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/summaries/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import SavedSummary from '@/models/SavedSummary';
+import SavedSummary, { ISavedSummary } from '@/models/SavedSummary';
+
+// Type for update payload
+interface UpdateSummaryPayload {
+  title?: string;
+  tags?: string[];
+  isFavorite?: boolean;
+}
 
 // GET - Get specific summary by ID
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     await connectToDatabase();
     
-    const summary = await SavedSummary.findById(params.id).lean();
+    const summary = await SavedSummary.findById(params.id).lean<ISavedSummary>();
     
     if (!summary) {
       return NextResponse.json(
@@ -38,14 +44,14 @@ export async function GET(
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     await connectToDatabase();
     
-    const body = await request.json();
+    const body = await request.json() as UpdateSummaryPayload;
     const { title, tags, isFavorite } = body;
     
-    const updateData: any = {};
+    const updateData: Partial<ISavedSummary> = {};
     if (title !== undefined) updateData.title = title;
     if (tags !== undefined) updateData.tags = tags;
     if (isFavorite !== undefined) updateData.isFavorite = isFavorite;
@@ -54,7 +60,7 @@ export async function PUT(
       params.id,
       updateData,
       { new: true, runValidators: true }
-    ).lean();
+    ).lean<ISavedSummary>();
     
     if (!updatedSummary) {
       return NextResponse.json(
@@ -81,7 +87,7 @@ export async function PUT(
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     await connectToDatabase();
     
