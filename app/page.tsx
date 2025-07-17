@@ -1,12 +1,9 @@
 "use client"
 
- 
 /* eslint-disable @next/next/no-img-element */
 import { useState, useEffect } from 'react';
-import { Moon, Sun, RefreshCw, Clock, ExternalLink, Search, Globe, TrendingUp, Heart, Briefcase, Zap, Gamepad2, Sparkles, Star, Brain, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { Moon, Sun, RefreshCw, Clock, ExternalLink, Search, Globe, TrendingUp, Heart, Briefcase, Zap, Gamepad2, Sparkles, Star, Brain, Lightbulb, ChevronDown, ChevronUp, BookmarkPlus, Bookmark, History, Trash2, Eye } from 'lucide-react';
 
-// Types
-// ... rest of your component code
 // Types
 interface NewsSource {
   name: string;
@@ -40,9 +37,17 @@ interface TopicSummary {
   isLoading: boolean;
 }
 
-// Groq Service
-// Replace the existing GroqService class in your page.tsx with this updated version:
+interface SavedSummary {
+  _id: string;
+  topic: string;
+  summary: string;
+  keyPoints: string[];
+  totalArticles: number;
+  savedAt: string;
+  title: string;
+}
 
+// Groq Service
 class GroqService {
   private apiKey: string;
   private baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
@@ -190,6 +195,7 @@ class GroqService {
 }
 
 const NewsWebsite = () => {
+  // Existing state declarations
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -204,6 +210,11 @@ const NewsWebsite = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [groqService] = useState(new GroqService());
+
+  // Modified saved summaries state - initialized as empty array
+  const [savedSummaries, setSavedSummaries] = useState<SavedSummary[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+  const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const topics = [
     { id: 'health', name: 'Health', icon: Heart, color: 'from-pink-500 to-rose-500', bg: 'bg-gradient-to-r from-pink-50 to-rose-50' },
@@ -276,6 +287,87 @@ const NewsWebsite = () => {
     }
   };
 
+  const saveSummary = async () => {
+  if (!topicSummary) return;
+  
+  setSavingStatus('saving');
+  
+  try {
+    console.log('Attempting to save summary:', topicSummary); // Debug log
+    
+    const response = await fetch('/api/summaries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic: topicSummary.topic,
+        summary: topicSummary.summary,
+        keyPoints: topicSummary.keyPoints,
+        totalArticles: topicSummary.totalArticles,
+        title: `${currentTopic?.name} News Summary - ${new Date().toLocaleDateString()}`,
+        generatedAt: topicSummary.generatedAt // Make sure we include this
+      }),
+    });
+
+    console.log('Save response status:', response.status); // Debug log
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Save failed:', errorData);
+      throw new Error(errorData.error || 'Failed to save summary');
+    }
+
+    const data = await response.json();
+    console.log('Save successful:', data); // Debug log
+    
+    setSavingStatus('saved');
+    fetchSavedSummaries(); // Refresh the saved summaries
+    setTimeout(() => setSavingStatus('idle'), 2000);
+  } catch (error) {
+    console.error('Error saving summary:', error);
+    setSavingStatus('error');
+    setTimeout(() => setSavingStatus('idle'), 2000);
+  }
+};
+
+  // Modify the fetchSavedSummaries function in page.tsx
+const fetchSavedSummaries = async () => {
+  try {
+    console.log('Fetching saved summaries...'); // Debug log
+    const response = await fetch('/api/summaries');
+    
+    console.log('Fetch response status:', response.status); // Debug log
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Fetched summaries:', data); // Debug log
+    
+    // Ensure we always set an array, even if empty
+    setSavedSummaries(Array.isArray(data.data) ? data.data : []);
+  } catch (error) {
+    console.error('Error fetching saved summaries:', error);
+    setSavedSummaries([]);
+  }
+}; 
+
+  const deleteSummary = async (id: string) => {
+    try {
+      const response = await fetch(`/api/summaries/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setSavedSummaries(savedSummaries.filter(summary => summary._id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting summary:', error);
+    }
+  };
+
   useEffect(() => {
     fetchNews(selectedTopic);
   }, [selectedTopic]);
@@ -284,6 +376,10 @@ const NewsWebsite = () => {
     setMounted(true);
     const savedTheme = false;
     setDarkMode(savedTheme);
+  }, []);
+
+  useEffect(() => {
+    fetchSavedSummaries();
   }, []);
 
   const toggleDarkMode = () => {
@@ -494,20 +590,36 @@ const NewsWebsite = () => {
               
               {/* AI Summary Button */}
               {articles.length > 0 && (
-                <button
-                  onClick={generateSummary}
-                  disabled={summaryLoading}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
-                    darkMode 
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' 
-                      : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
-                  } text-white shadow-lg`}
-                >
-                  <Brain className={`h-5 w-5 ${summaryLoading ? 'animate-pulse' : ''}`} />
-                  <span className="font-medium">
-                    {summaryLoading ? 'Generating...' : 'AI Summary'}
-                  </span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={generateSummary}
+                    disabled={summaryLoading}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                      darkMode 
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' 
+                        : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+                    } text-white shadow-lg`}
+                  >
+                    <Brain className={`h-5 w-5 ${summaryLoading ? 'animate-pulse' : ''}`} />
+                    <span className="font-medium">
+                      {summaryLoading ? 'Generating...' : 'AI Summary'}
+                    </span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowSaved(!showSaved)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                      darkMode 
+                        ? 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700' 
+                        : 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
+                    } text-white shadow-lg`}
+                  >
+                    <History className="h-5 w-5" />
+                    <span className="font-medium">
+                      Saved ({savedSummaries.length})
+                    </span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -583,6 +695,45 @@ const NewsWebsite = () => {
                     </ul>
                   </div>
                   
+                  {topicSummary && !summaryLoading && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={saveSummary}
+                        disabled={savingStatus === 'saving'}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                          savingStatus === 'saved' 
+                            ? 'bg-gradient-to-r from-green-600 to-green-600' 
+                            : savingStatus === 'error'
+                            ? 'bg-gradient-to-r from-red-600 to-red-600'
+                            : darkMode 
+                            ? 'bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700' 
+                            : 'bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700'
+                        } text-white shadow-lg`}
+                      >
+                        {savingStatus === 'saving' ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span className="font-medium">Saving...</span>
+                          </>
+                        ) : savingStatus === 'saved' ? (
+                          <>
+                            <Bookmark className="h-5 w-5" />
+                            <span className="font-medium">Saved!</span>
+                          </>
+                        ) : savingStatus === 'error' ? (
+                          <>
+                            <span className="font-medium">Error</span>
+                          </>
+                        ) : (
+                          <>
+                            <BookmarkPlus className="h-5 w-5" />
+                            <span className="font-medium">Save Summary</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  
                   <div className={`pt-4 border-t ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
                     <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       Generated from {topicSummary.totalArticles} articles • {new Date(topicSummary.generatedAt).toLocaleString()}
@@ -595,6 +746,135 @@ const NewsWebsite = () => {
                   <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     Click &quot;AI Summary&quot; to generate an intelligent overview of the current news.
                   </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Saved Summaries Section */}
+        {showSaved && (
+          <div className={`mb-8 rounded-3xl overflow-hidden transition-all duration-500 ${
+            darkMode 
+              ? 'bg-gray-800/50 border border-gray-700/50' 
+              : 'bg-white/70 border border-white/50'
+          } backdrop-blur-sm shadow-lg`}>
+            <div className={`px-6 py-4 border-b ${
+              darkMode ? 'border-gray-700/50 bg-gradient-to-r from-green-900/30 to-teal-900/30' : 'border-white/50 bg-gradient-to-r from-green-50/50 to-teal-50/50'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-r from-green-600 to-teal-600">
+                    <History className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Saved Summaries
+                    </h3>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {savedSummaries.length} summaries saved
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSaved(false)}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    darkMode 
+                      ? 'bg-gray-700/50 hover:bg-gray-600/50' 
+                      : 'bg-white/50 hover:bg-white/80'
+                  }`}
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {savedSummaries.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bookmark className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    No saved summaries yet. Generate and save some summaries to see them here!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {savedSummaries.map((summary) => (
+                    <div
+                      key={summary._id}
+                      className={`p-4 rounded-xl border transition-all duration-300 ${
+                        darkMode 
+                          ? 'bg-gray-700/30 border-gray-600/50 hover:bg-gray-700/50' 
+                          : 'bg-white/50 border-gray-200/50 hover:bg-white/80'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {summary.title}
+                          </h4>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {summary.topic} • {new Date(summary.savedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteSummary(summary._id)}
+                          className={`p-1 rounded-full transition-all duration-300 ${
+                            darkMode 
+                              ? 'text-red-400 hover:bg-red-900/30' 
+                              : 'text-red-600 hover:bg-red-100'
+                          }`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      <p className={`text-sm mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {summary.summary.substring(0, 200)}...
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            darkMode 
+                              ? 'bg-gray-600/50 text-gray-300' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {summary.keyPoints.length} key points
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            darkMode 
+                              ? 'bg-gray-600/50 text-gray-300' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {summary.totalArticles} articles
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setTopicSummary({
+                              topic: summary.topic,
+                              summary: summary.summary,
+                              keyPoints: summary.keyPoints,
+                              totalArticles: summary.totalArticles,
+                              generatedAt: summary.savedAt,
+                              isLoading: false
+                            });
+                            setShowSummary(true);
+                            setShowSaved(false);
+                          }}
+                          className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                            darkMode 
+                              ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30' 
+                              : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                          }`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span>View</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
