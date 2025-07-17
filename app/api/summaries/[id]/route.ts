@@ -1,20 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/summaries/[id]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import SavedSummary from '@/models/SavedSummary';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET - Get specific summary by ID
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDatabase();
     
-    const summary = await SavedSummary.findById(params.id);
+    const { id } = await params;
+    const summary = await SavedSummary.findById(id).lean();
     
     if (!summary) {
       return NextResponse.json(
@@ -37,24 +36,27 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // PUT - Update summary
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDatabase();
     
+    const { id } = await params;
     const body = await request.json();
     const { title, tags, isFavorite } = body;
     
-    const updateData = {
-      ...(title !== undefined && { title }),
-      ...(tags !== undefined && { tags }),
-      ...(isFavorite !== undefined && { isFavorite })
-    };
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (tags !== undefined) updateData.tags = tags;
+    if (isFavorite !== undefined) updateData.isFavorite = isFavorite;
     
     const updatedSummary = await SavedSummary.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).lean();
     
     if (!updatedSummary) {
       return NextResponse.json(
@@ -78,11 +80,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 // DELETE - Delete summary
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDatabase();
     
-    const deletedSummary = await SavedSummary.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const deletedSummary = await SavedSummary.findByIdAndDelete(id);
     
     if (!deletedSummary) {
       return NextResponse.json(
