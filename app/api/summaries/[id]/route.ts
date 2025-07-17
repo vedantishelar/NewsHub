@@ -1,24 +1,20 @@
 // app/api/summaries/[id]/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import SavedSummary, { ISavedSummary } from '@/models/SavedSummary';
+import SavedSummary from '@/models/SavedSummary';
 
-// Type for update payload
-interface UpdateSummaryPayload {
-  title?: string;
-  tags?: string[];
-  isFavorite?: boolean;
+interface RouteParams {
+  params: {
+    id: string;
+  };
 }
 
 // GET - Get specific summary by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function GET(request: Request, { params }: RouteParams) {
   try {
     await connectToDatabase();
     
-    const summary = await SavedSummary.findById(params.id).lean<ISavedSummary>();
+    const summary = await SavedSummary.findById(params.id);
     
     if (!summary) {
       return NextResponse.json(
@@ -41,26 +37,24 @@ export async function GET(
 }
 
 // PUT - Update summary
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function PUT(request: Request, { params }: RouteParams) {
   try {
     await connectToDatabase();
     
-    const body = await request.json() as UpdateSummaryPayload;
+    const body = await request.json();
     const { title, tags, isFavorite } = body;
     
-    const updateData: Partial<ISavedSummary> = {};
-    if (title !== undefined) updateData.title = title;
-    if (tags !== undefined) updateData.tags = tags;
-    if (isFavorite !== undefined) updateData.isFavorite = isFavorite;
+    const updateData = {
+      ...(title !== undefined && { title }),
+      ...(tags !== undefined && { tags }),
+      ...(isFavorite !== undefined && { isFavorite })
+    };
     
     const updatedSummary = await SavedSummary.findByIdAndUpdate(
       params.id,
       updateData,
       { new: true, runValidators: true }
-    ).lean<ISavedSummary>();
+    );
     
     if (!updatedSummary) {
       return NextResponse.json(
@@ -84,10 +78,7 @@ export async function PUT(
 }
 
 // DELETE - Delete summary
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     await connectToDatabase();
     
